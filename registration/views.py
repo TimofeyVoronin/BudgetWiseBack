@@ -9,7 +9,7 @@ from .serializers import CustomUserSerializer
 
 
 class RegistrationAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = CustomUserSerializer(data=request.data)
@@ -22,7 +22,7 @@ class RegistrationAPIView(APIView):
 
 
 class LoginAPIView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         data = request.data
@@ -50,7 +50,7 @@ class LoginAPIView(APIView):
 
 
 class LogoutAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request):
         refresh_token = request.data.get('refresh_token')
