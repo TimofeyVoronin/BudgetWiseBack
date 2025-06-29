@@ -27,13 +27,11 @@ class CustomUserSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'password', 'password2')
 
     def validate(self, attrs):
-        # Проверяем, что оба поля есть
         password = attrs.get('password')
         password2 = attrs.get('password2')
         if password != password2:
             raise serializers.ValidationError({"password2": "Пароли не совпадают."})
 
-        # Пропускаем пароль через стандартные валидаторы Django
         try:
             validate_password(password)
         except django_exceptions.ValidationError as e:
@@ -42,7 +40,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        # Убираем password2 перед созданием
         validated_data.pop('password2')
 
         email = validated_data['email']
