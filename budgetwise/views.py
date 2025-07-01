@@ -1,33 +1,31 @@
 from django.http import HttpResponse
-from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
+from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import MyModel
-from .serializers import MyModelSerializer
-
+from .models import MyModel, Transaction
+from .serializers import MyModelSerializer, TransactionSerializer
+from .permissions import IsOwnerOrReadOnly
 
 def index(request):
     return HttpResponse("Hello, it's homepage")
 
 
-class MyModelListCreateAPIView(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
+class MyModelViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsOwnerOrReadOnly,)
     queryset = MyModel.objects.all()
     serializer_class = MyModelSerializer
 
 
-class MyModelRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated,)
-    queryset = MyModel.objects.all()
-    serializer_class = MyModelSerializer
+class TransactionViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsOwnerOrReadOnly,)
+    serializer_class = TransactionSerializer
 
+    def get_queryset(self):
+        return Transaction.objects.filter(user=self.request.user).order_by('-date')
 
-class FinancePageView(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request, *args, **kwargs):
+    @action(detail=False, methods=['get'], url_path='finance-page')
+    def finance(self, request):
         return Response({
             "detail": "Вы видите защищённый ресурс!",
             "your_email": request.user.email,
