@@ -3,12 +3,14 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import Transaction, Position
-from .serializers import TransactionSerializer, PositionSerializer
+from .models import Transaction, Position, Category
+from .serializers import TransactionSerializer, PositionSerializer, CategorySerializer
 from .permissions import IsOwnerOrReadOnly
+
 
 def index(request):
     return HttpResponse("Hello, it's homepage")
+
 
 class TransactionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
@@ -32,3 +34,9 @@ class PositionViewSet(viewsets.ModelViewSet):
         return Position.objects.filter(
             transaction__user=self.request.user
         )
+
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsOwnerOrReadOnly,)
+    queryset = Category.objects.all().order_by('parent__id', 'id')
+    serializer_class = CategorySerializer
