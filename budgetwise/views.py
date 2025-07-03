@@ -1,34 +1,42 @@
 from django.http import HttpResponse
-from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.views import APIView
+from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from .models import MyModel
-from .serializers import MyModelSerializer
+from .models import Transaction, Position, Category
+from .serializers import TransactionSerializer, PositionSerializer, CategorySerializer
+from .permissions import IsOwnerOrReadOnly
 
 
 def index(request):
     return HttpResponse("Hello, it's homepage")
 
 
-class MyModelListCreateAPIView(generics.ListCreateAPIView):
-    permission_classes = (IsAuthenticated,)
-    queryset = MyModel.objects.all()
-    serializer_class = MyModelSerializer
+class TransactionViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsOwnerOrReadOnly,)
+    serializer_class = TransactionSerializer
+
+    def get_queryset(self):
+        return Transaction.objects.filter(user=self.request.user).order_by('-date')
+
+    @action(detail=True, methods=['get'])
+    def positions(self, request, pk=None):
+        txn = self.get_object()
+        serializer = PositionSerializer(txn.positions.all(), many=True)
+        return Response(serializer.data)
 
 
-class MyModelRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = (IsAuthenticated,)
-    queryset = MyModel.objects.all()
-    serializer_class = MyModelSerializer
+class PositionViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsOwnerOrReadOnly,)
+    serializer_class = PositionSerializer
+
+    def get_queryset(self):
+        return Position.objects.filter(
+            transaction__user=self.request.user
+        )
 
 
-class FinancePageView(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request, *args, **kwargs):
-        return Response({
-            "detail": "Вы видите защищённый ресурс!",
-            "your_email": request.user.email,
-        })
+class CategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = (IsOwnerOrReadOnly,)
+    queryset = Category.objects.all().order_by('parent__id', 'id')
+    serializer_class = CategorySerializer

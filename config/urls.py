@@ -16,7 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from budgetwise import views
+from budgetwise.views import index
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 from rest_framework_simplejwt.views import (
     TokenRefreshView,
@@ -25,7 +25,7 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', views.index, name='home'),
+    path('', index, name='home'),
     path('api/', include('budgetwise.urls')),
     path('reg/', include('registration.urls')),
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),

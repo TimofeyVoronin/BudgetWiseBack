@@ -1,12 +1,12 @@
-from django.urls import path
-from .views import (
-    MyModelListCreateAPIView,
-    MyModelRetrieveUpdateDestroyAPIView,
-    FinancePageView,
-)
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import TransactionViewSet, PositionViewSet, CategoryViewSet
+
+router = DefaultRouter()
+router.register(r'transactions', TransactionViewSet, basename='transactions')
+router.register(r'positions', PositionViewSet, basename='positions')
+router.register(r'categories',   CategoryViewSet,    basename='categories')
 
 urlpatterns = [
-    path('items/', MyModelListCreateAPIView.as_view(), name='items-list-create'),
-    path('items/<int:pk>/', MyModelRetrieveUpdateDestroyAPIView.as_view(), name='items-detail'),
-    path('FinancePage/', FinancePageView.as_view(), name='FinancePage'),
+    path('', include(router.urls)),
 ]
