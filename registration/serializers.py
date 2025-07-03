@@ -16,32 +16,19 @@ class CustomUserSerializer(serializers.ModelSerializer):
         min_length=8,
         help_text="Пароль минимум 8 символов"
     )
-    password2 = serializers.CharField(
-        write_only=True,
-        required=True,
-        help_text="Повторите пароль для подтверждения"
-    )
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'password', 'password2')
+        fields = ('id', 'email', 'password')
 
-    def validate(self, attrs):
-        password = attrs.get('password')
-        password2 = attrs.get('password2')
-        if password != password2:
-            raise serializers.ValidationError({"password2": "Пароли не совпадают."})
-
+    def validate_password(self, value):
         try:
-            validate_password(password)
+            validate_password(value)
         except django_exceptions.ValidationError as e:
-            raise serializers.ValidationError({"password": list(e.messages)})
-
-        return attrs
+            raise serializers.ValidationError(list(e.messages))
+        return value
 
     def create(self, validated_data):
-        validated_data.pop('password2')
-
         email = validated_data['email']
         password = validated_data['password']
         user = User.objects.create_user(
