@@ -5,13 +5,11 @@ from .models import Transaction, Position, Category
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    # Отдаём родительскую категорию по её ID (или None)
     parent = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
         allow_null=True,
         required=False
     )
-    # Генерируем поле subcategories из related_name
     subcategories = serializers.SerializerMethodField()
 
     class Meta:
@@ -19,14 +17,12 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'description', 'parent', 'subcategories')
 
     def get_subcategories(self, obj):
-        # возвращаем упрощённый список {id, name} дочерних категорий
         return [{'id': c.id, 'name': c.name} for c in obj.subcategories.all()]
 
 
 class PositionSerializer(serializers.ModelSerializer):
-    category = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all()
-    )
+    transaction = serializers.PrimaryKeyRelatedField(read_only=True)
+    category    = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
 
     class Meta:
         model = Position
