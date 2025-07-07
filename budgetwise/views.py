@@ -3,16 +3,13 @@ from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
-
 from .models import Transaction, Position, Category
 from .serializers import TransactionSerializer, PositionSerializer, CategorySerializer
 from .permissions import IsOwnerOrReadOnly
 from .filters import TransactionFilter, PositionFilter, CategoryFilter
 
-
 def index(request):
     return HttpResponse("Hello, it's homepage")
-
 
 class TransactionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
@@ -24,7 +21,8 @@ class TransactionViewSet(viewsets.ModelViewSet):
     ordering = ('-date',)
 
     def get_queryset(self):
-        return Transaction.objects.filter(user=self.request.user)
+        qs = super().get_queryset()
+        return qs.filter(user=self.request.user)
 
     @action(detail=True, methods=['get'])
     def positions(self, request, pk=None):
@@ -35,7 +33,6 @@ class TransactionViewSet(viewsets.ModelViewSet):
             qs = qs.filter(name__icontains=search)
         serializer = PositionSerializer(qs, many=True)
         return Response(serializer.data)
-
 
 class PositionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
@@ -50,7 +47,6 @@ class PositionViewSet(viewsets.ModelViewSet):
         return Position.objects.filter(
             transaction__user=self.request.user
         )
-
 
 class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)

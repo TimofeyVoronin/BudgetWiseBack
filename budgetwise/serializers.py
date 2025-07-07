@@ -4,20 +4,22 @@ from rest_framework.serializers import CurrentUserDefault
 from .models import Transaction, Position, Category
 
 
+class SimpleCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model  = Category
+        fields = ('id', 'name')
+
 class CategorySerializer(serializers.ModelSerializer):
-    parent = serializers.PrimaryKeyRelatedField(
+    parent        = serializers.PrimaryKeyRelatedField(
         queryset=Category.objects.all(),
         allow_null=True,
         required=False
     )
-    subcategories = serializers.SerializerMethodField()
+    subcategories = SimpleCategorySerializer(many=True, read_only=True)
 
     class Meta:
-        model = Category
+        model  = Category
         fields = ('id', 'name', 'description', 'parent', 'subcategories')
-
-    def get_subcategories(self, obj):
-        return [{'id': c.id, 'name': c.name} for c in obj.subcategories.all()]
 
 
 class PositionSerializer(serializers.ModelSerializer):
@@ -26,20 +28,36 @@ class PositionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Position
-        fields = ('id', 'transaction', 'category', 'name', 'product_type', 'quantity', 'price', 'sum')
+        fields = (
+            'id',
+            'transaction',
+            'category',
+            'name',
+            'product_type',
+            'quantity',
+            'price',
+            'sum',
+        )
         read_only_fields = ('sum',)
 
 
 class TransactionSerializer(serializers.ModelSerializer):
     user = HiddenField(default=CurrentUserDefault())
     positions = PositionSerializer(many=True)
-    category = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all()
-    )
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
 
     class Meta:
         model = Transaction
-        fields = ('id', 'date', 'category', 'type', 'created_at', 'user', 'positions')
+        fields = (
+            'id',
+            'date',
+            'category',
+            'amount',
+            'type',
+            'created_at',
+            'user',
+            'positions',
+        )
 
     def create(self, validated_data):
         positions_data = validated_data.pop('positions')

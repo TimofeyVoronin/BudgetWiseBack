@@ -28,6 +28,10 @@ class Category(models.Model):
     def __str__(self):
         return self.name
 
+TYPE_CHOICES = (
+        (0,  'Доход'),
+        (1, 'Расход'),
+    )
 
 class Transaction(models.Model):
     user = models.ForeignKey(
@@ -42,14 +46,15 @@ class Transaction(models.Model):
         related_name='transactions',
         help_text="Категория транзакции"
     )
-    TYPE_CHOICES = [
-        ('income', 'Доход'),
-        ('outcome', 'Расход'),
-    ]
-    type = models.CharField(
-        max_length=7,
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Общая сумма чека (вводит пользователь)"
+    )
+    type = models.PositiveSmallIntegerField(
         choices=TYPE_CHOICES,
-        help_text="Доход или расход"
+        help_text="0 = Доход, 1 = Расход"
     )
     created_at = models.DateTimeField(
         auto_now_add=True,

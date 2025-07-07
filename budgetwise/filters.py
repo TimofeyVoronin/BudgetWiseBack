@@ -1,43 +1,93 @@
 import django_filters
+from django_filters import DateFromToRangeFilter
 from django.db.models import Q
 from .models import Transaction, Position, Category
 
+class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
+    pass
+
 class TransactionFilter(django_filters.FilterSet):
-    date = django_filters.DateFilter(field_name='date', lookup_expr='exact')
-    category = django_filters.NumberFilter(field_name='category__id', lookup_expr='exact')
-    type = django_filters.CharFilter(field_name='type', lookup_expr='exact')
-    search = django_filters.CharFilter(method='filter_search', label='Поиск')
+    date = django_filters.DateFilter(
+        field_name='date', 
+        lookup_expr='exact'
+    )
+    date_between = DateFromToRangeFilter(
+        field_name='date', 
+        label='Диапазон дат'
+    )
+    category = NumberInFilter(
+        field_name='category__id', 
+        lookup_expr='in', 
+        label='Категория (несколько через запятую)'
+    )
+    type = django_filters.NumberFilter(
+        field_name='type', 
+        lookup_expr='exact', 
+        label='Тип транзакции'
+    )
+    type__in = NumberInFilter(
+        field_name='type', 
+        lookup_expr='in', 
+        label='Типы (несколько через запятую)'
+    )
+    search = django_filters.CharFilter(
+        method='filter_search', 
+        label='Поиск по позициям/категориям'
+    )
 
     class Meta:
-        model = Transaction
-        fields = ['date', 'category', 'type', 'search']
+        model  = Transaction
+        fields = ['date', 'category', 'type']
 
     def filter_search(self, queryset, name, value):
-        return queryset.filter(
+        qs = queryset.select_related('category', 'user') \
+                .prefetch_related('positions', 'positions__category')
+        return qs.filter(
             Q(positions__name__icontains=value) |
             Q(category__name__icontains=value)
         ).distinct()
 
-
 class PositionFilter(django_filters.FilterSet):
-    category = django_filters.NumberFilter(field_name='category__id', lookup_expr='exact')
-    product_type = django_filters.CharFilter(field_name='product_type', lookup_expr='exact')
-    search = django_filters.CharFilter(method='filter_search', label='Поиск')
+    category = NumberInFilter(
+        field_name='category__id', 
+        lookup_expr='in', 
+        label='Категории (несколько через запятую)'
+    )
+    product_type = django_filters.CharFilter(
+        field_name='product_type', 
+        lookup_expr='exact', 
+        label='Тип продукта'
+    )
+    search = django_filters.CharFilter(
+        method='filter_search', 
+        label='Поиск по названию/типу'
+    )
 
     class Meta:
         model = Position
-        fields = ['category', 'product_type', 'search']
+        fields = ['category', 'product_type']
 
     def filter_search(self, queryset, name, value):
-        return queryset.filter(
+        qs = queryset.select_related('category', 'transaction') \
+                     .prefetch_related('transaction__category')
+
+        return qs.filter(
             Q(name__icontains=value) |
             Q(product_type__icontains=value)
         )
 
 
 class CategoryFilter(django_filters.FilterSet):
-    name = django_filters.CharFilter(field_name='name', lookup_expr='icontains', label='Название содержит')
-    parent = django_filters.NumberFilter(field_name='parent__id', lookup_expr='exact')
+    name = django_filters.CharFilter(
+        field_name='name', 
+        lookup_expr='icontains', 
+        label='Название содержит'
+    )
+    parent = NumberInFilter(
+        field_name='parent__id', 
+        lookup_expr='in', 
+        label='Родительские категории (несколько через запятую)'
+    )
 
     class Meta:
         model = Category
