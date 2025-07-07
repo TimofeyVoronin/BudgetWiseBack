@@ -7,25 +7,16 @@ class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
     pass
 
 class TransactionFilter(django_filters.FilterSet):
-    date = django_filters.DateFilter(
-        field_name='date', 
-        lookup_expr='exact'
-    )
-    date_between = DateFromToRangeFilter(
-        field_name='date', 
-        label='Диапазон дат'
+    date = DateFromToRangeFilter(
+        field_name='date',
+        label='Дата (диапазон)'
     )
     category = NumberInFilter(
         field_name='category__id', 
         lookup_expr='in', 
         label='Категория (несколько через запятую)'
     )
-    type = django_filters.NumberFilter(
-        field_name='type', 
-        lookup_expr='exact', 
-        label='Тип транзакции'
-    )
-    type__in = NumberInFilter(
+    type = NumberInFilter(
         field_name='type', 
         lookup_expr='in', 
         label='Типы (несколько через запятую)'
@@ -37,7 +28,7 @@ class TransactionFilter(django_filters.FilterSet):
 
     class Meta:
         model  = Transaction
-        fields = ['date', 'category', 'type']
+        fields = ('date', 'category', 'type')
 
     def filter_search(self, queryset, name, value):
         qs = queryset.select_related('category', 'user') \
@@ -65,7 +56,7 @@ class PositionFilter(django_filters.FilterSet):
 
     class Meta:
         model = Position
-        fields = ['category', 'product_type']
+        fields = ('category', 'product_type')
 
     def filter_search(self, queryset, name, value):
         qs = queryset.select_related('category', 'transaction') \
@@ -91,4 +82,4 @@ class CategoryFilter(django_filters.FilterSet):
 
     class Meta:
         model = Category
-        fields = ['name', 'parent']
+        fields = ('name', 'parent')
