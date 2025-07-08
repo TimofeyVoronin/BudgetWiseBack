@@ -1,0 +1,3 @@
+TOKEN="Your token"
+API="https://proverkacheka.com/api/v1/check/get"
+SECRET_KEY="django-insecure-uzyal*=o*#ivj0kc8)fqk#4pts@nt_hg!&xzbig-$%rj0mz!2+"
