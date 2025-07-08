@@ -1,42 +1,51 @@
 from django.http import HttpResponse
-from rest_framework import viewsets
+from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-
+from django_filters.rest_framework import DjangoFilterBackend
 from .models import Transaction, Position, Category
-from .serializers import TransactionSerializer, PositionSerializer, CategorySerializer
+from .serializers import (
+    TransactionCreateSerializer,
+    PositionSerializer,
+    CategorySerializer
+)
 from .permissions import IsOwnerOrReadOnly
-
+from .filters import TransactionFilter, PositionFilter, CategoryFilter
 
 def index(request):
     return HttpResponse("Hello, it's homepage")
 
-
 class TransactionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
-    serializer_class = TransactionSerializer
+    serializer_class = TransactionCreateSerializer
+    queryset = Transaction.objects.all()
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = TransactionFilter
+    ordering_fields = ('date', 'created_at')
+    ordering = ('-date',)
 
     def get_queryset(self):
-        return Transaction.objects.filter(user=self.request.user).order_by('-date')
-
-    @action(detail=True, methods=['get'])
-    def positions(self, request, pk=None):
-        txn = self.get_object()
-        serializer = PositionSerializer(txn.positions.all(), many=True)
-        return Response(serializer.data)
+        return super().get_queryset().filter(user=self.request.user)
 
 
 class PositionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
     serializer_class = PositionSerializer
+    queryset = Position.objects.all()
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = PositionFilter
+    ordering_fields = ('quantity', 'price')
+    ordering = ('-quantity',)
 
     def get_queryset(self):
-        return Position.objects.filter(
-            transaction__user=self.request.user
-        )
+        return super().get_queryset().filter(transaction__user=self.request.user)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
-    queryset = Category.objects.all().order_by('parent__id', 'id')
     serializer_class = CategorySerializer
+    queryset = Category.objects.all()
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = CategoryFilter
+    ordering_fields = ('name',)
+    ordering = ('name',)

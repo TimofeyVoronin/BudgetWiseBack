@@ -30,23 +30,37 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
-
-INSTALLED_APPS = [
+DJANGO_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'budgetwise',
-    'registration',
+]
+
+FILTERS_APPS = [
+    'django_filters',
+    'daterangefilter',
+]
+
+DRF_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'drf_spectacular',
-    'corsheaders',
-
 ]
+
+THIRD_PARTY_APPS = [
+    'corsheaders',
+]
+
+PROJECT_APPS = [
+    'budgetwise',
+    'registration',
+]
+
+INSTALLED_APPS = DJANGO_APPS + FILTERS_APPS + DRF_APPS + THIRD_PARTY_APPS + PROJECT_APPS
 
 REST_FRAMEWORK = {
 
@@ -62,6 +76,8 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 
     'COERCE_DECIMAL_TO_STRING': False,
+
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 
 }
 
