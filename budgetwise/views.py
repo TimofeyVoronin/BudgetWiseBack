@@ -12,8 +12,6 @@ from .serializers import (
 )
 from .permissions import IsOwnerOrReadOnly
 from .filters import TransactionFilter, PositionFilter, CategoryFilter
-
-# импортируем класс-обработчик чеков
 from .chequeInfo import ChequeInfo
 
 
