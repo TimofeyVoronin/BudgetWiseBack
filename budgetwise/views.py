@@ -1,4 +1,10 @@
+import os
+import tempfile
+from decimal import Decimal
+
 from django.http import HttpResponse
+from django.utils.dateparse import parse_datetime
+
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -21,12 +27,12 @@ def index(request):
 
 class TransactionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
-    serializer_class   = TransactionCreateSerializer
-    queryset           = Transaction.objects.all()
-    filter_backends    = (DjangoFilterBackend, filters.OrderingFilter)
-    filterset_class    = TransactionFilter
-    ordering_fields    = ('date', 'created_at')
-    ordering           = ('-date',)
+    serializer_class = TransactionCreateSerializer
+    queryset = Transaction.objects.all()
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = TransactionFilter
+    ordering_fields = ('date', 'created_at')
+    ordering = ('-date',)
 
     def get_queryset(self):
         return super().get_queryset().filter(user=self.request.user)
@@ -34,12 +40,12 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
 class PositionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
-    serializer_class   = PositionSerializer
-    queryset           = Position.objects.all()
-    filter_backends    = (DjangoFilterBackend, filters.OrderingFilter)
-    filterset_class    = PositionFilter
-    ordering_fields    = ('quantity', 'price')
-    ordering           = ('-quantity',)
+    serializer_class = PositionSerializer
+    queryset = Position.objects.all()
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = PositionFilter
+    ordering_fields = ('quantity', 'price')
+    ordering = ('-quantity',)
 
     def get_queryset(self):
         return super().get_queryset().filter(transaction__user=self.request.user)
@@ -47,20 +53,15 @@ class PositionViewSet(viewsets.ModelViewSet):
 
 class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
-    serializer_class   = CategorySerializer
-    queryset           = Category.objects.all()
-    filter_backends    = (DjangoFilterBackend, filters.OrderingFilter)
-    filterset_class    = CategoryFilter
-    ordering_fields    = ('name',)
-    ordering           = ('name',)
+    serializer_class = CategorySerializer
+    queryset = Category.objects.all()
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_class = CategoryFilter
+    ordering_fields = ('name',)
+    ordering = ('name',)
 
 
 class ChequeViewSet(viewsets.ViewSet):
-    """
-    Примитивный ViewSet для обработки чеков:
-      - POST /api/cheque/upload/ — загрузить изображение QR-кода и получить данные
-      - GET  /api/cheque/last/   — вернуть последний распознанный чек
-    """
     last_data = {}
 
     @action(detail=False, methods=['post'])
@@ -72,12 +73,11 @@ class ChequeViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        import tempfile, os
         tmp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(qrfile.name)[1])
         for chunk in qrfile.chunks():
             tmp.write(chunk)
         tmp.close()
-        print("Hello")
+
         parser = ChequeInfo()
         try:
             parser.setQRImage(tmp.name)
@@ -87,8 +87,51 @@ class ChequeViewSet(viewsets.ViewSet):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         os.remove(tmp.name)
-        ChequeViewSet.last_data = data
-        return Response(data, status=status.HTTP_200_OK)
+
+        dt = parse_datetime(data.get('data'))
+        total_sum = sum(item.get('sum', 0) for item in data.get('items', []))
+        total_amount = Decimal(total_sum) / 100
+        default_cat, _ = Category.objects.get_or_create(
+            name='Без категории',
+            defaults={'description': 'Автоматически созданная категория по умолчанию'}
+        )
+
+        transaction = Transaction.objects.create(
+            user=request.user,
+            date=dt.date() if dt else None,
+            category=default_cat,
+            amount=total_amount,
+            type=1
+        )
+
+        for item in data.get('items', []):
+            prod_type = item.get('productType') or ''
+            name = item.get('name') or ''
+            qty = item.get('quantity') or 0
+            price_pc = item.get('price') or 0
+            price = Decimal(price_pc) / 100
+            cat, _ = Category.objects.get_or_create(
+                name=prod_type,
+                defaults={'description': f'Категория для товаров типа "{prod_type}"'}
+            )
+
+            Position.objects.create(
+                transaction=transaction,
+                category=cat,
+                name=name,
+                product_type=prod_type,
+                quantity=qty,
+                price=price
+            )
+
+        ChequeViewSet.last_data = {
+            'transaction_id': transaction.id,
+            'date': transaction.date.isoformat(),
+            'amount': str(transaction.amount),
+            'items': data.get('items', []),
+        }
+
+        return Response(ChequeViewSet.last_data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['get'])
     def last(self, request):
