@@ -13,6 +13,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import Transaction, Position, Category
 from .serializers import (
     TransactionCreateSerializer,
+    TransactionDetailSerializer,
     PositionSerializer,
     CategorySerializer
 )
@@ -62,8 +63,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class ChequeViewSet(viewsets.ViewSet):
-    last_data = {}
-
     @action(detail=False, methods=['post'])
     def upload(self, request):
         qrfile = request.FILES.get('qrfile')
@@ -72,12 +71,11 @@ class ChequeViewSet(viewsets.ViewSet):
                 {"error": "Нужно прислать файл под ключом qrfile"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(qrfile.name)[1])
+        tmp = tempfile.NamedTemporaryFile(delete=False,
+                                          suffix=os.path.splitext(qrfile.name)[1])
         for chunk in qrfile.chunks():
             tmp.write(chunk)
         tmp.close()
-
         parser = ChequeInfo()
         try:
             parser.setQRImage(tmp.name)
@@ -85,15 +83,16 @@ class ChequeViewSet(viewsets.ViewSet):
         except Exception as e:
             os.remove(tmp.name)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-        os.remove(tmp.name)
+        finally:
+            if os.path.exists(tmp.name):
+                os.remove(tmp.name)
 
         dt = parse_datetime(data.get('data'))
         total_sum = sum(item.get('sum', 0) for item in data.get('items', []))
         total_amount = Decimal(total_sum) / 100
         default_cat, _ = Category.objects.get_or_create(
             name='Без категории',
-            defaults={'description': 'Автоматически созданная категория по умолчанию'}
+            defaults={'description': 'Автоматически созданная категория'}
         )
 
         transaction = Transaction.objects.create(
@@ -101,40 +100,22 @@ class ChequeViewSet(viewsets.ViewSet):
             date=dt.date() if dt else None,
             category=default_cat,
             amount=total_amount,
-            type=1
+            type=1,
         )
 
+        position_objs = []
         for item in data.get('items', []):
-            prod_type = item.get('productType') or ''
-            name = item.get('name') or ''
-            qty = item.get('quantity') or 0
-            price_pc = item.get('price') or 0
-            price = Decimal(price_pc) / 100
-            cat, _ = Category.objects.get_or_create(
-                name=prod_type,
-                defaults={'description': f'Категория для товаров типа "{prod_type}"'}
+            price_pc = item.get('price', 0) or 0
+            position_objs.append(
+                Position(
+                    transaction=transaction,
+                    category=default_cat,
+                    name=item.get('name', '') or '',
+                    quantity=item.get('quantity', 0) or 0,
+                    price=Decimal(price_pc) / 100
+                )
             )
+        Position.objects.bulk_create(position_objs)
 
-            Position.objects.create(
-                transaction=transaction,
-                category=cat,
-                name=name,
-                product_type=prod_type,
-                quantity=qty,
-                price=price
-            )
-
-        ChequeViewSet.last_data = {
-            'transaction_id': transaction.id,
-            'date': transaction.date.isoformat(),
-            'amount': str(transaction.amount),
-            'items': data.get('items', []),
-        }
-
-        return Response(ChequeViewSet.last_data, status=status.HTTP_201_CREATED)
-
-    @action(detail=False, methods=['get'])
-    def last(self, request):
-        if not ChequeViewSet.last_data:
-            return Response({"detail": "Нет распознанных чеков"}, status=status.HTTP_404_NOT_FOUND)
-        return Response(ChequeViewSet.last_data, status=status.HTTP_200_OK)
+        out = TransactionDetailSerializer(transaction)
+        return Response(out.data, status=status.HTTP_201_CREATED)

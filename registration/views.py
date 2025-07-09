@@ -5,16 +5,14 @@ from rest_framework import generics, permissions, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import CustomUserSerializer
-from .serializers import ChangePasswordSerializer
-from .serializers import ProfileSerializer
+from . import serializers
 
 
 class RegistrationAPIView(APIView):
     permission_classes = (AllowAny,)
 
     def post(self, request):
-        serializer = CustomUserSerializer(data=request.data)
+        serializer = serializers.CustomUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(
@@ -75,7 +73,7 @@ class LogoutAPIView(APIView):
 
 class ProfileAPIView(generics.RetrieveUpdateAPIView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = ProfileSerializer
+    serializer_class = serializers.ProfileSerializer
 
     def get_object(self):
         return self.request.user
@@ -83,17 +81,19 @@ class ProfileAPIView(generics.RetrieveUpdateAPIView):
 
 class ChangePasswordAPIView(generics.UpdateAPIView):
     permission_classes = (IsAuthenticated,)
-    serializer_class = ChangePasswordSerializer
+    serializer_class = serializers.ChangePasswordSerializer
 
-    def get_object(self, queryset=None):
-        return self.request.user
-
-    def update(self, request, *args, **kwargs):
-        user = self.get_object()
-        serializer = self.get_serializer(data=request.data, context={'request': request})
+    def post(self, request):
+        serializer = self.serializer_class(
+            data=request.data,
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
-
+        user = request.user
         user.set_password(serializer.validated_data['new_password'])
         user.save()
 
-        return Response({"detail": "Пароль успешно изменён"}, status=status.HTTP_200_OK)
+        return Response(
+            {"detail": "Пароль успешно изменён"},
+            status=status.HTTP_200_OK
+        )
