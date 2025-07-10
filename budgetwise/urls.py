@@ -14,7 +14,7 @@ router.register(r'transactions', TransactionViewSet, basename='transactions')
 router.register(r'categories', CategoryViewSet, basename='categories')
 transactions_router = routers.NestedDefaultRouter(router, r'transactions', lookup='transaction')
 transactions_router.register(r'positions', PositionViewSet, basename='transaction-positions')
-transactions_router.register(r'cheque', ChequeViewSet, basename='transaction-cheque')
+router.register(r'cheques', ChequeViewSet, basename='cheques')
 
 urlpatterns = [
     path('', include(router.urls)),

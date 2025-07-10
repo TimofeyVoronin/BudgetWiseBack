@@ -64,15 +64,14 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 class ChequeViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'])
-    def upload(self, request):
+    def upload(self, request, transaction_pk=None):
         qrfile = request.FILES.get('qrfile')
         if not qrfile:
             return Response(
                 {"error": "Нужно прислать файл под ключом qrfile"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        tmp = tempfile.NamedTemporaryFile(delete=False,
-                                          suffix=os.path.splitext(qrfile.name)[1])
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(qrfile.name)[1])
         for chunk in qrfile.chunks():
             tmp.write(chunk)
         tmp.close()
@@ -106,13 +105,16 @@ class ChequeViewSet(viewsets.ViewSet):
         position_objs = []
         for item in data.get('items', []):
             price_pc = item.get('price', 0) or 0
+            qty = item.get('quantity', 0) or 0
+            sum_pc = item.get('sum', price_pc * qty)
             position_objs.append(
                 Position(
                     transaction=transaction,
                     category=default_cat,
                     name=item.get('name', '') or '',
                     quantity=item.get('quantity', 0) or 0,
-                    price=Decimal(price_pc) / 100
+                    price=Decimal(price_pc) / 100,
+                    sum = Decimal(sum_pc) / 100
                 )
             )
         Position.objects.bulk_create(position_objs)
