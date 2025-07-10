@@ -15,6 +15,7 @@ services:
   django:
     env_file: 
       - ./db.env
+      - ./.env
     build:
       context: .
       dockerfile: Dockerfile

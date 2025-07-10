@@ -1,18 +1,18 @@
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import generics, permissions, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import CustomUserSerializer
+from . import serializers
 
 
 class RegistrationAPIView(APIView):
     permission_classes = (AllowAny,)
 
     def post(self, request):
-        serializer = CustomUserSerializer(data=request.data)
+        serializer = serializers.CustomUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(
@@ -70,3 +70,30 @@ class LogoutAPIView(APIView):
             )
 
         return Response({'success': 'Выход выполнен'}, status=status.HTTP_200_OK)
+
+class ProfileAPIView(generics.RetrieveUpdateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = serializers.ProfileSerializer
+
+    def get_object(self):
+        return self.request.user
+
+
+class ChangePasswordAPIView(generics.UpdateAPIView):
+    permission_classes = (IsAuthenticated,)
+    serializer_class = serializers.ChangePasswordSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(
+            data=request.data,
+            context={'request': request}
+        )
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+
+        return Response(
+            {"detail": "Пароль успешно изменён"},
+            status=status.HTTP_200_OK
+        )
