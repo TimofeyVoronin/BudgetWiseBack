@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from django.http import HttpResponse
 from django.utils.dateparse import parse_datetime
+from django.db.models import Sum, Case, When, F, DecimalField
 
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
@@ -37,6 +38,22 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return super().get_queryset().filter(user=self.request.user)
+
+    @action(detail=False, methods=['get'], url_path='balance')
+    def balance(self, request):
+        qs = self.get_queryset()
+        agg = qs.aggregate(
+            balance=Sum(
+                Case(
+                    When(type=0, then=F('amount')),
+                    When(type=1, then=-F('amount')),
+                    output_field=DecimalField()
+                )
+            )
+        )
+        balance = agg['balance'] or 0
+
+        return Response({'balance': balance})
 
 
 class PositionViewSet(viewsets.ModelViewSet):
