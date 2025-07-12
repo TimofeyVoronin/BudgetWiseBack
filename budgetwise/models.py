@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import Sum, Case, When, F, DecimalField
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True, help_text="Название категории")
@@ -67,3 +68,20 @@ class Position(models.Model):
 
     def __str__(self):
         return f"{self.category}: {self.name} x{self.quantity}"
+
+
+class Balance(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='balance'
+    )
+    amount = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Текущий баланс пользователя"
+    )
+
+    def __str__(self):
+        return f"{self.user.username} — {self.amount}"

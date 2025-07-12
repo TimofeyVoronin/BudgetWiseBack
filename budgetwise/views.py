@@ -11,7 +11,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Transaction, Position, Category
+from .models import Transaction, Position, Category, Balance
 from .serializers import (
     TransactionCreateSerializer,
     TransactionDetailSerializer,
@@ -54,6 +54,11 @@ class TransactionViewSet(viewsets.ModelViewSet):
         balance = agg['balance'] or 0
 
         return Response({'balance': balance})
+    
+    @action(detail=False, methods=['get'], url_path='balance')
+    def balance(self, request):
+        bal_obj, _ = Balance.objects.get_or_create(user=request.user)
+        return Response({'balance': bal_obj.amount})
 
 
 class PositionViewSet(viewsets.ModelViewSet):
