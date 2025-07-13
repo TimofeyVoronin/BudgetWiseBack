@@ -1,7 +1,13 @@
 from rest_framework import serializers
 from rest_framework.fields import HiddenField
 from rest_framework.serializers import CurrentUserDefault
-from .models import Transaction, Position, Category
+from .models import Transaction, Position, Category, OperationType
+
+class OperationTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OperationType
+        fields = ('id', 'name')
+
 
 class TransactionCreateSerializer(serializers.ModelSerializer):
     user = HiddenField(default=CurrentUserDefault())

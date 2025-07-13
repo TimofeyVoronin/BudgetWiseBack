@@ -11,12 +11,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Transaction, Position, Category, Balance
+from .models import Transaction, Position, Category, Balance, OperationType
 from .serializers import (
     TransactionCreateSerializer,
     TransactionDetailSerializer,
     PositionSerializer,
-    CategorySerializer
+    CategorySerializer,
+    OperationTypeSerializer
 )
 from .permissions import IsOwnerOrReadOnly
 from .filters import TransactionFilter, PositionFilter, CategoryFilter
@@ -143,3 +144,8 @@ class ChequeViewSet(viewsets.ViewSet):
 
         out = TransactionDetailSerializer(transaction)
         return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class OperationTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = OperationType.objects.all().order_by('id')
+    serializer_class = OperationTypeSerializer

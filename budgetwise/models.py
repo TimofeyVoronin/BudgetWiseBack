@@ -40,11 +40,27 @@ class Transaction(models.Model):
         max_digits=12, decimal_places=2, default=0,
         help_text="Общая сумма чека (вводит пользователь)"
     )
-    type = models.PositiveSmallIntegerField(choices=TYPE_CHOICES, help_text="0 = Доход, 1 = Расход")
+    type = models.ForeignKey(
+        'OperationType',
+        on_delete=models.PROTECT,
+        db_column='type',
+        help_text="Ссылка на тип операции (0=Доход, 1=Расход)",
+        related_name='transactions'
+    )
     created_at = models.DateTimeField(auto_now_add=True, help_text="Время создания записи")
 
     def __str__(self):
         return f"{self.user.username}: {self.get_type_display()} on {self.date}"
+
+
+class OperationType(models.Model):
+    id   = models.PositiveSmallIntegerField(primary_key=True)
+    name = models.CharField(max_length=50, unique=True)
+    class Meta:
+        verbose_name = "Тип операции"
+        verbose_name_plural = "Типы операций"
+    def __str__(self):
+        return self.name
 
 
 class Position(models.Model):
