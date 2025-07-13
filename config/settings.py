@@ -56,7 +56,7 @@ THIRD_PARTY_APPS = [
 ]
 
 PROJECT_APPS = [
-    'budgetwise',
+    'budgetwise.apps.BudgetwiseConfig',
     'registration',
 ]
 

@@ -11,12 +11,13 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Transaction, Position, Category
+from .models import Transaction, Position, Category, Balance, OperationType
 from .serializers import (
     TransactionCreateSerializer,
     TransactionDetailSerializer,
     PositionSerializer,
-    CategorySerializer
+    CategorySerializer,
+    OperationTypeSerializer
 )
 from .permissions import IsOwnerOrReadOnly
 from .filters import TransactionFilter, PositionFilter, CategoryFilter
@@ -54,6 +55,11 @@ class TransactionViewSet(viewsets.ModelViewSet):
         balance = agg['balance'] or 0
 
         return Response({'balance': balance})
+    
+    @action(detail=False, methods=['get'], url_path='balance')
+    def balance(self, request):
+        bal_obj, _ = Balance.objects.get_or_create(user=request.user)
+        return Response({'balance': bal_obj.amount})
 
 
 class PositionViewSet(viewsets.ModelViewSet):
@@ -138,3 +144,8 @@ class ChequeViewSet(viewsets.ViewSet):
 
         out = TransactionDetailSerializer(transaction)
         return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class OperationTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = OperationType.objects.all().order_by('id')
+    serializer_class = OperationTypeSerializer
