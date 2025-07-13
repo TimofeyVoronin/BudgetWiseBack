@@ -6,8 +6,7 @@ from .views import (
     TransactionViewSet,
     PositionViewSet,
     CategoryViewSet,
-    ChequeViewSet,
-    OperationTypeViewSet
+    ChequeViewSet
 )
 
 router = DefaultRouter()
@@ -16,7 +15,6 @@ router.register(r'categories', CategoryViewSet, basename='categories')
 transactions_router = routers.NestedDefaultRouter(router, r'transactions', lookup='transaction')
 transactions_router.register(r'positions', PositionViewSet, basename='transaction-positions')
 router.register(r'cheques', ChequeViewSet, basename='cheques')
-router.register(r'operation-types', OperationTypeViewSet, basename='operation-types')
 
 urlpatterns = [
     path('', include(router.urls)),
