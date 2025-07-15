@@ -27,7 +27,7 @@ class PositionSerializer(serializers.ModelSerializer):
 
 class SimpleCategorySerializer(serializers.ModelSerializer):
     class Meta:
-        model  = Category
+        model = Category
         fields = ('id', 'name')
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -43,11 +43,11 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'description', 'parent', 'subcategories')
 
 class TransactionDetailSerializer(serializers.ModelSerializer):
-    user      = serializers.CharField(source='user.username', read_only=True)
-    category  = SimpleCategorySerializer(read_only=True)
+    user = serializers.CharField(source='user.username', read_only=True)
+    category = SimpleCategorySerializer(read_only=True)
     positions = PositionSerializer(many=True, read_only=True)
 
     class Meta:
-        model  = Transaction
+        model = Transaction
         fields = ('id', 'user', 'date', 'category', 'amount', 'type', 'created_at', 'positions')
         read_only_fields = ('created_at',)

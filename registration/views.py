@@ -14,12 +14,8 @@ class RegistrationAPIView(APIView):
     def post(self, request):
         serializer = serializers.CustomUserSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        user = serializer.save()
-        return Response(
-            CustomUserSerializer(user).data,
-            status=status.HTTP_201_CREATED
-        )
-
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 class LoginAPIView(APIView):
     permission_classes = (AllowAny,)

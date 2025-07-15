@@ -94,20 +94,15 @@ class ChequeViewSet(viewsets.ViewSet):
                 {"error": "Нужно прислать файл под ключом qrfile"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(qrfile.name)[1])
-        for chunk in qrfile.chunks():
-            tmp.write(chunk)
-        tmp.close()
+        
+        qrfile = request.FILES["qrfile"]
+        raw = qrfile.read()
         parser = ChequeInfo()
         try:
-            parser.setQRImage(tmp.name)
+            parser.setQRImageFromBytes(raw, qrfile.name)
             data = parser.getDistProducts()
         except Exception as e:
-            os.remove(tmp.name)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        finally:
-            if os.path.exists(tmp.name):
-                os.remove(tmp.name)
 
         dt = parse_datetime(data.get('data'))
         total_sum = sum(item.get('sum', 0) for item in data.get('items', []))
@@ -122,9 +117,9 @@ class ChequeViewSet(viewsets.ViewSet):
             date=dt.date() if dt else None,
             category=default_cat,
             amount=total_amount,
-            type=1,
+            type_id=1,
         )
-
+                
         position_objs = []
         for item in data.get('items', []):
             price_pc = item.get('price', 0) or 0
@@ -141,6 +136,8 @@ class ChequeViewSet(viewsets.ViewSet):
                 )
             )
         Position.objects.bulk_create(position_objs)
+        
+         
 
         out = TransactionDetailSerializer(transaction)
         return Response(out.data, status=status.HTTP_201_CREATED)
