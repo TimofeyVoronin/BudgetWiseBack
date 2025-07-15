@@ -5,6 +5,7 @@ services:
     restart: always
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./backups:/backups:ro
     env_file: 
       - ./db.env
     ports:
