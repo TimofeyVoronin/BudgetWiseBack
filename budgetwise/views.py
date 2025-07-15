@@ -4,18 +4,20 @@ from decimal import Decimal
 
 from django.http import HttpResponse
 from django.utils.dateparse import parse_datetime
+from django.db.models import Sum, Case, When, F, DecimalField
 
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Transaction, Position, Category
+from .models import Transaction, Position, Category, Balance, OperationType
 from .serializers import (
     TransactionCreateSerializer,
     TransactionDetailSerializer,
     PositionSerializer,
-    CategorySerializer
+    CategorySerializer,
+    OperationTypeSerializer
 )
 from .permissions import IsOwnerOrReadOnly
 from .filters import TransactionFilter, PositionFilter, CategoryFilter
@@ -37,6 +39,27 @@ class TransactionViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         return super().get_queryset().filter(user=self.request.user)
+
+    @action(detail=False, methods=['get'], url_path='balance')
+    def balance(self, request):
+        qs = self.get_queryset()
+        agg = qs.aggregate(
+            balance=Sum(
+                Case(
+                    When(type=0, then=F('amount')),
+                    When(type=1, then=-F('amount')),
+                    output_field=DecimalField()
+                )
+            )
+        )
+        balance = agg['balance'] or 0
+
+        return Response({'balance': balance})
+    
+    @action(detail=False, methods=['get'], url_path='balance')
+    def balance(self, request):
+        bal_obj, _ = Balance.objects.get_or_create(user=request.user)
+        return Response({'balance': bal_obj.amount})
 
 
 class PositionViewSet(viewsets.ModelViewSet):
@@ -71,20 +94,15 @@ class ChequeViewSet(viewsets.ViewSet):
                 {"error": "Нужно прислать файл под ключом qrfile"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(qrfile.name)[1])
-        for chunk in qrfile.chunks():
-            tmp.write(chunk)
-        tmp.close()
+        
+        qrfile = request.FILES["qrfile"]
+        raw = qrfile.read()
         parser = ChequeInfo()
         try:
-            parser.setQRImage(tmp.name)
+            parser.setQRImageFromBytes(raw, qrfile.name)
             data = parser.getDistProducts()
         except Exception as e:
-            os.remove(tmp.name)
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        finally:
-            if os.path.exists(tmp.name):
-                os.remove(tmp.name)
 
         dt = parse_datetime(data.get('data'))
         total_sum = sum(item.get('sum', 0) for item in data.get('items', []))
@@ -99,9 +117,9 @@ class ChequeViewSet(viewsets.ViewSet):
             date=dt.date() if dt else None,
             category=default_cat,
             amount=total_amount,
-            type=1,
+            type_id=1,
         )
-
+                
         position_objs = []
         for item in data.get('items', []):
             price_pc = item.get('price', 0) or 0
@@ -118,6 +136,13 @@ class ChequeViewSet(viewsets.ViewSet):
                 )
             )
         Position.objects.bulk_create(position_objs)
+        
+         
 
         out = TransactionDetailSerializer(transaction)
         return Response(out.data, status=status.HTTP_201_CREATED)
+
+
+class OperationTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = OperationType.objects.all().order_by('id')
+    serializer_class = OperationTypeSerializer

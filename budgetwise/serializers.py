@@ -1,7 +1,13 @@
 from rest_framework import serializers
 from rest_framework.fields import HiddenField
 from rest_framework.serializers import CurrentUserDefault
-from .models import Transaction, Position, Category
+from .models import Transaction, Position, Category, OperationType
+
+class OperationTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OperationType
+        fields = ('id', 'name')
+
 
 class TransactionCreateSerializer(serializers.ModelSerializer):
     user = HiddenField(default=CurrentUserDefault())
@@ -21,7 +27,7 @@ class PositionSerializer(serializers.ModelSerializer):
 
 class SimpleCategorySerializer(serializers.ModelSerializer):
     class Meta:
-        model  = Category
+        model = Category
         fields = ('id', 'name')
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -37,11 +43,11 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'description', 'parent', 'subcategories')
 
 class TransactionDetailSerializer(serializers.ModelSerializer):
-    user      = serializers.CharField(source='user.username', read_only=True)
-    category  = SimpleCategorySerializer(read_only=True)
+    user = serializers.CharField(source='user.username', read_only=True)
+    category = SimpleCategorySerializer(read_only=True)
     positions = PositionSerializer(many=True, read_only=True)
 
     class Meta:
-        model  = Transaction
+        model = Transaction
         fields = ('id', 'user', 'date', 'category', 'amount', 'type', 'created_at', 'positions')
         read_only_fields = ('created_at',)
