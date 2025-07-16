@@ -17,7 +17,8 @@ from .serializers import (
     TransactionDetailSerializer,
     PositionSerializer,
     CategorySerializer,
-    OperationTypeSerializer
+    OperationTypeSerializer,
+    ChequeUploadSerializer
 )
 from .permissions import IsOwnerOrReadOnly
 from .filters import TransactionFilter, PositionFilter, CategoryFilter
@@ -85,7 +86,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
     ordering_fields = ('name',)
     ordering = ('name',)
 
-@extend_schema(tags=['Cheques'])
+@extend_schema(tags=['Cheques'],
+    request=ChequeUploadSerializer,
+    responses={201: TransactionDetailSerializer},
+    description="Загружает файл qrfile, парсит чек и создаёт транзакцию с позициями")
 class ChequeViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'])
     def upload(self, request, transaction_pk=None):

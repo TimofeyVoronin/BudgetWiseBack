@@ -162,3 +162,24 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
         model = Transaction
         fields = ('id', 'user', 'date', 'category', 'amount', 'type', 'created_at', 'positions')
         read_only_fields = ('created_at',)
+
+
+@extend_schema_serializer(
+    component_name='ChequeUpload',
+    examples=[
+        OpenApiExample(
+            'Upload Cheque Example',
+            summary='Пример запроса на загрузку чека',
+            value={'qrfile': '(binary file)'},
+            request_only=True
+        )
+    ]
+)
+class ChequeUploadSerializer(serializers.Serializer):
+    qrfile = serializers.FileField(
+        label="Файл чека",
+        help_text="Изображение (jpg/png/tiff/pdf) чека под ключом ‘qrfile’ в multipart/form-data",
+        required=True,
+        allow_empty_file=False,
+        style={'base_template': 'file.html'}
+    )
