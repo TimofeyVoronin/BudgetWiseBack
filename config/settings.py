@@ -62,6 +62,17 @@ PROJECT_APPS = [
 
 INSTALLED_APPS = DJANGO_APPS + FILTERS_APPS + DRF_APPS + THIRD_PARTY_APPS + PROJECT_APPS
 
+SPECTACULAR_SETTINGS = {
+    'TAGS': [
+        {'name': 'Transactions', 'description': 'Управление транзакциями'},
+        {'name': 'Positions', 'description': 'Позиции внутри транзакций'},
+        {'name': 'Categories', 'description': 'Категории доходов/расходов'},
+        {'name': 'Cheques', 'description': 'Загрузка и парсинг чеков'},
+        {'name': 'OperationTypes', 'description': 'Справочник типов операций'},
+        {'name': 'Auth', 'description': 'Регистрация и аутентификация'},
+    ],
+}
+
 REST_FRAMEWORK = {
 
     'DEFAULT_AUTHENTICATION_CLASSES': [

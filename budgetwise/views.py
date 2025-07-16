@@ -17,17 +17,19 @@ from .serializers import (
     TransactionDetailSerializer,
     PositionSerializer,
     CategorySerializer,
-    OperationTypeSerializer
+    OperationTypeSerializer,
+    ChequeUploadSerializer
 )
 from .permissions import IsOwnerOrReadOnly
 from .filters import TransactionFilter, PositionFilter, CategoryFilter
 from .chequeInfo import ChequeInfo
+from drf_spectacular.utils import extend_schema
 
 
 def index(request):
     return HttpResponse("Hello, it's homepage")
 
-
+@extend_schema(tags=['Transactions'])
 class TransactionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
     serializer_class = TransactionCreateSerializer
@@ -61,7 +63,7 @@ class TransactionViewSet(viewsets.ModelViewSet):
         bal_obj, _ = Balance.objects.get_or_create(user=request.user)
         return Response({'balance': bal_obj.amount})
 
-
+@extend_schema(tags=['Positions'])
 class PositionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
     serializer_class = PositionSerializer
@@ -74,7 +76,7 @@ class PositionViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return super().get_queryset().filter(transaction__user=self.request.user)
 
-
+@extend_schema(tags=['Categories'])
 class CategoryViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
     serializer_class = CategorySerializer
@@ -84,7 +86,10 @@ class CategoryViewSet(viewsets.ModelViewSet):
     ordering_fields = ('name',)
     ordering = ('name',)
 
-
+@extend_schema(tags=['Cheques'],
+    request=ChequeUploadSerializer,
+    responses={201: TransactionDetailSerializer},
+    description="Загружает файл qrfile, парсит чек и создаёт транзакцию с позициями")
 class ChequeViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'])
     def upload(self, request, transaction_pk=None):
@@ -142,7 +147,7 @@ class ChequeViewSet(viewsets.ViewSet):
         out = TransactionDetailSerializer(transaction)
         return Response(out.data, status=status.HTTP_201_CREATED)
 
-
+@extend_schema(tags=['OperationTypes'])
 class OperationTypeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = OperationType.objects.all().order_by('id')
     serializer_class = OperationTypeSerializer
