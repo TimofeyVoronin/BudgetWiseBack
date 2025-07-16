@@ -3,17 +3,34 @@ from django.contrib.auth.password_validation import validate_password
 from django.core import exceptions as django_exceptions
 from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
+from drf_spectacular.utils import extend_schema_serializer, OpenApiExample
 
+
+@extend_schema_serializer(
+    component_name='UserRegistration',
+    examples=[
+        OpenApiExample(
+            'Register Request',
+            summary='Запрос на регистрацию',
+            value={'email': 'ivan@example.com', 'password': 'Str0ngP@ssw0rd'},
+            request_only=True
+        ),
+        OpenApiExample(
+            'Register Response',
+            summary='Успешная регистрация',
+            value={'id': 7, 'email': 'ivan@example.com'},
+            response_only=True
+        )
+    ]
+)
 class CustomUserSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all())],
-        help_text="Ваш email (он будет использоваться как логин)"
+        help_text="Ваш email (он будет логином)"
     )
     password = serializers.CharField(
-        write_only=True,
-        required=True,
-        min_length=8,
+        write_only=True, required=True, min_length=8,
         help_text="Пароль минимум 8 символов"
     )
 
@@ -29,15 +46,82 @@ class CustomUserSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
-        email = validated_data['email']
-        password = validated_data['password']
-        user = User.objects.create_user(
-            username=email,
-            email=email,
-            password=password
+        return User.objects.create_user(
+            username=validated_data['email'],
+            email=validated_data['email'],
+            password=validated_data['password']
         )
-        return user
 
+
+@extend_schema_serializer(
+    component_name='Login',
+    examples=[
+        OpenApiExample(
+            'Login Request',
+            summary='Запрос на аутентификацию',
+            value={'email': 'ivan@example.com', 'password': 'Str0ngP@ssw0rd'},
+            request_only=True
+        ),
+    ]
+)
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(help_text="Ваш email")
+    password = serializers.CharField(write_only=True, help_text="Пароль")
+
+
+@extend_schema_serializer(
+    component_name='TokenPair',
+    examples=[
+        OpenApiExample(
+            'TokenPair Response',
+            summary='Пара JWT токенов',
+            value={'refresh': '…', 'access': '…'},
+            response_only=True
+        ),
+    ]
+)
+class TokenPairSerializer(serializers.Serializer):
+    refresh = serializers.CharField(help_text="JWT refresh token")
+    access = serializers.CharField(help_text="JWT access token")
+
+
+@extend_schema_serializer(
+    component_name='Logout',
+    examples=[
+        OpenApiExample(
+            'Logout Request',
+            summary='Запрос на выход',
+            value={'refresh_token': '…'},
+            request_only=True
+        ),
+        OpenApiExample(
+            'Logout Response',
+            summary='Успешный выход',
+            value={'success': 'Выход выполнен'},
+            response_only=True
+        ),
+    ]
+)
+class LogoutSerializer(serializers.Serializer):
+    refresh_token = serializers.CharField(help_text="Refresh‑токен для чёрного списка")
+
+
+@extend_schema_serializer(
+    component_name='UserProfile',
+    examples=[
+        OpenApiExample(
+            'Profile Response',
+            summary='Данные профиля',
+            value={
+                'id': 7,
+                'email': 'ivan@example.com',
+                'first_name': 'Иван',
+                'last_name': 'Иванов'
+            },
+            response_only=True
+        ),
+    ]
+)
 class ProfileSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(read_only=True)
     first_name = serializers.CharField(required=False, allow_blank=True, help_text="Имя")
@@ -48,9 +132,30 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'first_name', 'last_name')
 
 
+@extend_schema_serializer(
+    component_name='ChangePassword',
+    examples=[
+        OpenApiExample(
+            'Change Password Request',
+            summary='Запрос на смену пароля',
+            value={'old_password': 'OldP@ss123', 'new_password': 'NewStr0ngP@ssw0rd'},
+            request_only=True
+        ),
+        OpenApiExample(
+            'Change Password Response',
+            summary='Успешная смена пароля',
+            value={'detail': 'Пароль успешно изменён'},
+            response_only=True
+        ),
+    ]
+)
 class ChangePasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField(required=True, write_only=True, help_text="Текущий пароль")
-    new_password = serializers.CharField(required=True, write_only=True, min_length=8, help_text="Новый пароль (мин. 8 символов)")
+    old_password = serializers.CharField(
+        write_only=True, help_text="Текущий пароль"
+    )
+    new_password = serializers.CharField(
+        write_only=True, min_length=8, help_text="Новый пароль (мин. 8 символов)"
+    )
 
     def validate_old_password(self, value):
         user = self.context['request'].user
