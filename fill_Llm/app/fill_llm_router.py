@@ -22,14 +22,14 @@ autoFillLLM.tokenVerification(token=ReqProductsLLM.userToken,userId=ReqProductsL
 def sendToChequeInfo(reqProductsLLM: ReqProductsLLM):
     #autoFillLLM.tokenVerification(token=reqProductsLLM.userToken,userId=reqProductsLLM.userID)
     categories = autoFillLLM.getCategory(reqProductsLLM,transactionID=reqProductsLLM.transactionID)
-    request.post(url=)
+    requests.post(url=)#send category transaction to the db
 
 
 @productsLLM.post("/setProductsTypes")
 def sendToChequeInfo(reqProductsLLM: ReqProductsLLM):
     #autoFillLLM.tokenVerification(token=ReqProductsLLM.userToken,userId=ReqProductsLLM.userID)
-    productType = autoFillLLM.getProductType(reqProductsLLM,transactionID=reqProductsLLM.transactionID)
-    return productType
+    productType = autoFillLLM.getPrositionCategory(reqProductsLLM)
+    requests.post(url=)#send category products to the db
 
 
 
