@@ -55,7 +55,7 @@ class AutoFillLLM(MiddleWare):
         js = json.loads(response["choices"][0]["message"]["content"])
         js["id"]=transactionID
         
-        return js'''
+        return json.dumps(js)'''
         
         return {"categoria":"Прочее","id":transactionID}#Delete
     
@@ -102,5 +102,5 @@ class AutoFillLLM(MiddleWare):
             jsonImput.items[i]["categoryID"] = js[i]
 
 
-        return jsonImput'''
+        return json.dumps(jsonImput)'''
         return {jsonImput}#Delete

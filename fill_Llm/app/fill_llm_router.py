@@ -19,17 +19,17 @@ autoFillLLM.tokenVerification(token=ReqProductsLLM.userToken,userId=ReqProductsL
 
 #Router
 @productsLLM.post("/setCategory")
-def sendToChequeInfo(reqProductsLLM: ReqProductsLLM):
+def setCategory(reqProductsLLM: ReqProductsLLM):
     #autoFillLLM.tokenVerification(token=reqProductsLLM.userToken,userId=reqProductsLLM.userID)
     categories = autoFillLLM.getCategory(reqProductsLLM,transactionID=reqProductsLLM.transactionID)
-    requests.post(url=)#send category transaction to the db
+    requests.post(url=, data = categories)#send category transaction to the db
 
 
 @productsLLM.post("/setProductsTypes")
-def sendToChequeInfo(reqProductsLLM: ReqProductsLLM):
+def setProductsTypes(reqProductsLLM: ReqProductsLLM):
     #autoFillLLM.tokenVerification(token=ReqProductsLLM.userToken,userId=ReqProductsLLM.userID)
-    productType = autoFillLLM.getPrositionCategory(reqProductsLLM)
-    requests.post(url=)#send category products to the db
+    positionsCategory = autoFillLLM.getPrositionCategory(reqProductsLLM)
+    requests.post(url=, data=positionsCategory)#send category products to the db
 
 
 
