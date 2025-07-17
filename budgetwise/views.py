@@ -29,6 +29,7 @@ from drf_spectacular.utils import extend_schema
 def index(request):
     return HttpResponse("Hello, it's homepage")
 
+
 @extend_schema(tags=['Transactions'])
 class TransactionViewSet(viewsets.ModelViewSet):
     permission_classes = (IsOwnerOrReadOnly,)
@@ -40,28 +41,45 @@ class TransactionViewSet(viewsets.ModelViewSet):
     ordering = ('-date',)
 
     def get_queryset(self):
+        # Показать только транзакции текущего пользователя
         return super().get_queryset().filter(user=self.request.user)
 
     @action(detail=False, methods=['get'], url_path='balance')
     def balance(self, request):
-        qs = self.get_queryset()
-        agg = qs.aggregate(
-            balance=Sum(
-                Case(
-                    When(type=0, then=F('amount')),
-                    When(type=1, then=-F('amount')),
-                    output_field=DecimalField()
-                )
-            )
-        )
-        balance = agg['balance'] or 0
-
-        return Response({'balance': balance})
-    
-    @action(detail=False, methods=['get'], url_path='balance')
-    def balance(self, request):
+        # Возвращает текущий баланс пользователя
         bal_obj, _ = Balance.objects.get_or_create(user=request.user)
         return Response({'balance': bal_obj.amount})
+
+    @action(
+        detail=True,
+        methods=['patch'],
+        url_path='set-category',
+        description="Меняет категорию транзакции по её ID"
+    )
+    def set_category(self, request, pk=None):
+        """
+        PATCH /api/transactions/{pk}/set-category/
+        Body: { "category_id": <int> }
+        """
+        tx = self.get_object()
+        cat_id = request.data.get('category_id')
+        if cat_id is None:
+            return Response(
+                {"detail": "Нужно передать category_id"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            category = Category.objects.get(pk=cat_id)
+        except Category.DoesNotExist:
+            return Response(
+                {"detail": f"Категория с id={cat_id} не найдена"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        tx.category = category
+        tx.save(update_fields=['category'])
+        out = TransactionDetailSerializer(tx, context={'request': request})
+        return Response(out.data, status=status.HTTP_200_OK)
+
 
 @extend_schema(tags=['Positions'])
 class PositionViewSet(viewsets.ModelViewSet):
@@ -74,7 +92,65 @@ class PositionViewSet(viewsets.ModelViewSet):
     ordering = ('-quantity',)
 
     def get_queryset(self):
+        # Только позиции транзакций текущего пользователя
         return super().get_queryset().filter(transaction__user=self.request.user)
+
+    @action(
+        detail=False,
+        methods=['patch'],
+        url_path='bulk-set-category',
+        description="Меняет категории сразу у нескольких позиций"
+    )
+    def bulk_set_category(self, request):
+        """
+        PATCH /api/positions/bulk-set-category/
+        Body: [
+          { "position_id": 1, "category_id": 3 },
+          { "position_id": 2, "category_id": 5 },
+          …
+        ]
+        """
+        payload = request.data
+        if not isinstance(payload, list):
+            return Response(
+                {"detail": "Ожидается список объектов"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        to_update = []
+        for idx, item in enumerate(payload):
+            pos_id = item.get('position_id')
+            cat_id = item.get('category_id')
+
+            if pos_id is None or cat_id is None:
+                return Response(
+                    {"detail": f"В элементе #{idx} отсутствуют position_id или category_id"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            try:
+                pos = Position.objects.get(pk=pos_id, transaction__user=request.user)
+            except Position.DoesNotExist:
+                return Response(
+                    {"detail": f"Позиция с id={pos_id} не найдена или не принадлежит вам"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            try:
+                cat = Category.objects.get(pk=cat_id)
+            except Category.DoesNotExist:
+                return Response(
+                    {"detail": f"Категория с id={cat_id} не найдена"},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            pos.category = cat
+            to_update.append(pos)
+
+        Position.objects.bulk_update(to_update, ['category'])
+        serializer = PositionSerializer(to_update, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @extend_schema(tags=['Categories'])
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -86,10 +162,13 @@ class CategoryViewSet(viewsets.ModelViewSet):
     ordering_fields = ('name',)
     ordering = ('name',)
 
-@extend_schema(tags=['Cheques'],
+
+@extend_schema(
+    tags=['Cheques'],
     request=ChequeUploadSerializer,
     responses={201: TransactionDetailSerializer},
-    description="Загружает файл qrfile, парсит чек и создаёт транзакцию с позициями")
+    description="Загружает файл qrfile, парсит чек и создаёт транзакцию с позициями"
+)
 class ChequeViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'])
     def upload(self, request, transaction_pk=None):
@@ -99,8 +178,6 @@ class ChequeViewSet(viewsets.ViewSet):
                 {"error": "Нужно прислать файл под ключом qrfile"},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        qrfile = request.FILES["qrfile"]
         raw = qrfile.read()
         parser = ChequeInfo()
         try:
@@ -135,17 +212,16 @@ class ChequeViewSet(viewsets.ViewSet):
                     transaction=transaction,
                     category=default_cat,
                     name=item.get('name', '') or '',
-                    quantity=item.get('quantity', 0) or 0,
+                    quantity=qty,
                     price=Decimal(price_pc) / 100,
-                    sum = Decimal(sum_pc) / 100
+                    sum=Decimal(sum_pc) / 100
                 )
             )
         Position.objects.bulk_create(position_objs)
-        
-         
 
-        out = TransactionDetailSerializer(transaction)
+        out = TransactionDetailSerializer(transaction, context={'request': request})
         return Response(out.data, status=status.HTTP_201_CREATED)
+
 
 @extend_schema(tags=['OperationTypes'])
 class OperationTypeViewSet(viewsets.ReadOnlyModelViewSet):

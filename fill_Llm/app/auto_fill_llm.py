@@ -17,7 +17,7 @@ class AutoFillLLM(MiddleWare):
             productList.append(jsonImput.items[i]["name"])
         return productList
 
-    def getCategory(self,jsonImput):
+    def getCategory(self,jsonImput,transactionID):
     
         listProducts = self.__getItems(jsonImput)#Get items from chequeInfo
 
@@ -55,9 +55,9 @@ class AutoFillLLM(MiddleWare):
         
         return json.loads(response["choices"][0]["message"]["content"])'''
         
-        return {"categoria":"Прочее"}#Delete
+        return {"categoria":"Прочее","id":transactionID}#Delete
     
-    def getProductType(self,jsonImput):
+    def getProductType(self,jsonImput,transactionID):
 
         listProducts = self.__getItems(jsonImput)#Get items from chequeInfo
 
@@ -94,4 +94,4 @@ class AutoFillLLM(MiddleWare):
 
 
         return jsonImput'''
-        return {"key":"dick"}#Delete
+        return {"key":"dick","id":transactionID}#Delete

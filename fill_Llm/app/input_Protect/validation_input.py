@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 class ReqProductsLLM(BaseModel):
     userToken: str = Field(default=...,description="Access token")
     userID: int = Field(default=...)
+    transactionID: int
     items: list = [
         {"name": str,  
         "productType": str,
