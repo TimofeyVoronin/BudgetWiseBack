@@ -22,14 +22,15 @@ autoFillLLM.tokenVerification(token=ReqProductsLLM.userToken,userId=ReqProductsL
 def setCategory(reqProductsLLM: ReqProductsLLM):
     #autoFillLLM.tokenVerification(token=reqProductsLLM.userToken,userId=reqProductsLLM.userID)
     categories = autoFillLLM.getCategory(reqProductsLLM,transactionID=reqProductsLLM.transactionID)
-    requests.post(url=, data = categories)#send category transaction to the db
-
+    requests.post(url=f"http://django:8000/api/transactions/{reqProductsLLM.transactionID}/set-category/", data = categories)#send category transaction to the db
+    return "Send successfull"
 
 @productsLLM.post("/setProductsTypes")
 def setProductsTypes(reqProductsLLM: ReqProductsLLM):
     #autoFillLLM.tokenVerification(token=ReqProductsLLM.userToken,userId=ReqProductsLLM.userID)
     positionsCategory = autoFillLLM.getPrositionCategory(reqProductsLLM)
-    requests.post(url=, data=positionsCategory)#send category products to the db
+    requests.post(url=f"http://django:8000/api/transactions/{reqProductsLLM.transactionID}/positions/bulk-set-category/", data=positionsCategory)#send category products to the db
+    return "Send successfull"
 
 
 

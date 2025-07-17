@@ -53,11 +53,11 @@ class AutoFillLLM(MiddleWare):
         )
 
         js = json.loads(response["choices"][0]["message"]["content"])
-        js["id"]=transactionID
+        
         
         return json.dumps(js)'''
         
-        return {"categoria":"Прочее","id":transactionID}#Delete
+        return {"categoria":"Прочее"}#Delete
     
     def getPrositionCategory(self,jsonImput):
 
